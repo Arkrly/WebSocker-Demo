@@ -1,161 +1,192 @@
-```markdown
-# Spring Boot WebSocket Project
+# Spring Boot Raw WebSocket Demo
 
-This project demonstrates basic WebSocket communication using **Spring Boot** with two WebSocket endpoints:
+A minimal Spring Boot project that demonstrates raw (frame-level) WebSocket handlers — an echo handler and a simple chat/broadcast handler — together with basic CORS and security configuration and unit tests.
 
-- **Echo Endpoint (`/ws/echo`)**: A simple WebSocket handler that echoes back any received text message prefixed with "echo: ".
-- **Chat Endpoint (`/ws/chat`)**: A WebSocket chat handler that broadcasts messages to all connected clients with session IDs.
-
-The project also includes unit tests to verify the behavior of both handlers.
+This README is cleaned, reorganized, and focused on quick setup, usage, and common configuration points.
 
 ---
 
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Technologies](#technologies)
-- [Setup and Running](#setup-and-running)
-- [WebSocket Endpoints](#websocket-endpoints)
+## Table of contents
+
+- [What this is](#what-this-is)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [WebSocket endpoints & examples](#websocket-endpoints--examples)
 - [Testing](#testing)
-- [CORS](#cors)
-- [Security](#security)
+- [CORS & Security](#cors--security)
 - [Logging](#logging)
-- [Project Structure](#project-structure)
+- [Project structure](#project-structure)
+- [Extending the project](#extending-the-project)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Project Overview
+## What this is
 
-This project teaches WebSocket basics in Spring Boot by providing:
-- Raw WebSocket handlers that operate at the protocol frame level.
-- Session management for multi-client broadcasting.
-- Clear separation of concerns with distinct handlers for echo and chat.
-- Simple CORS configuration for cross-origin support.
-- Basic Spring Security configuration allowing unauthenticated WebSocket connections.
-- Unit tests using JUnit and Mockito for WebSocket handlers.
+A compact demo showing how to write raw WebSocket handlers with Spring Boot:
 
----
+- Echo handler that replies with the same message prefixed by `echo: `.
+- Chat handler that broadcasts messages to all connected sessions.
+- Unit tests that use mocks to validate handler behavior.
+- Minimal security configuration that allows unauthenticated WebSocket handshakes.
 
-## Technologies
-
-- Java 17+
-- Spring Boot 3.x
-- Spring Framework WebSocket support
-- Spring Security 6.x (optional for security)
-- JUnit 5 (Jupiter) and Mockito for testing
-- Postman (for WebSocket client testing)
+This is intended for learning and small experiments (not production-ready).
 
 ---
 
-## Setup and Running
+## Features
 
-1. Clone or copy the project.
-2. Ensure you have Java 17+ and Maven/Gradle installed.
-3. Build the project:
+- Raw WebSocket message handling (TextMessage).
+- Session management for broadcasting.
+- Simple CORS configuration for WebSockets.
+- Example Spring Security configuration allowing WebSocket use without authentication.
+- Unit tests with JUnit 5 and Mockito.
+
+---
+
+## Requirements
+
+- Java 17 or later
+- Maven (or adapt to Gradle)
+- (Optional) Postman, wscat, or a browser for manual testing
+
+---
+
+## Quick start
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Arkrly/WebSocker-Demo.git
+cd WebSocker-Demo
 ```
 
+2. Build:
+```bash
 mvn clean install
-
-```
-4. Run the Spring Boot application:
 ```
 
+3. Run:
+```bash
 mvn spring-boot:run
-
 ```
-5. By default, the server listens on `http://localhost:8080`.
+
+The server will listen on: http://localhost:8080 by default.
 
 ---
 
-## WebSocket Endpoints
+## WebSocket endpoints & examples
 
-| Endpoint       | Description                      | Path         |
-|----------------|---------------------------------|--------------|
-| EchoHandler    | Echoes messages with “echo:” prefix | `/ws/echo`   |
-| ChatHandler    | Broadcasts messages to all connected chat clients | `/ws/chat` |
+Endpoints provided:
+- Echo: `/ws/echo` — replies with `echo: <your message>`
+- Chat: `/ws/chat` — broadcasts incoming messages to all connected clients (includes session id in logs)
+
+Examples:
+
+- Using wscat:
+```bash
+# install wscat (npm)
+npm i -g wscat
+
+# connect to echo
+wscat -c ws://localhost:8080/ws/echo
+# send a message, expect "echo: <message>"
+
+# connect two clients to chat
+wscat -c ws://localhost:8080/ws/chat
+wscat -c ws://localhost:8080/ws/chat
+# send in one client => both clients receive message
+```
+
+- Using browser console:
+```js
+// Echo
+const s = new WebSocket('ws://localhost:8080/ws/echo');
+s.onmessage = e => console.log('recv', e.data);
+s.onopen = () => s.send('hello');
+
+// Chat
+const c = new WebSocket('ws://localhost:8080/ws/chat');
+c.onmessage = e => console.log('chat recv', e.data);
+c.onopen = () => c.send('hi everyone');
+```
 
 ---
 
-## Testing WebSocket Endpoints
+## Testing
 
-### Using Postman
-
-- Open a new WebSocket request with the URL `ws://localhost:8080/ws/echo`.
-- Send a message; you should receive the same message back prefixed by `echo: `.
-- Open two WebSocket connections to `ws://localhost:8080/ws/chat` in Postman.
-- Send a chat message in one tab; it broadcasts to all connected chat tabs.
-
-### Unit Tests
-
-Testing uses mocks to simulate WebSocket sessions:
-
-- `WebSocketHandlersTest.java` contains tests for both echo and chat functionality.
-- To run tests:
-```
-
+- Unit tests use JUnit 5 and Mockito to simulate WebSocket sessions.
+- Run tests:
+```bash
 mvn test
-
 ```
 
----
-
-## CORS (Cross-Origin Resource Sharing)
-
-- Configured via `.setAllowedOrigins("*")` on handlers to allow connections from any origin.
-- Modify if needed to restrict origins in production.
+Relevant test file: `WebSocketHandlersTest.java` (contains tests for echo and chat handlers).
 
 ---
 
-## Security
+## CORS & Security
 
-- Spring Security configured to allow unauthenticated access to WebSocket endpoints.
-- CSRF protection disabled for WebSocket handshake.
-- HTTP Basic Auth enabled for other endpoints (customize as needed).
-- Adjust or remove security config for your requirements.
+- CORS for the WebSocket handlers is permissive in this demo (`setAllowedOrigins("*")`) so you can test from different origins. Tighten origins for production.
+- Security config allows unauthenticated WebSocket handshake while keeping other HTTP endpoints protected (example configuration file: `SecurityConfig.java`).
+- CSRF is typically not applicable to raw WebSocket frames, but check handshake endpoints if you enable CSRF elsewhere.
 
 ---
 
 ## Logging
 
-- Both handlers log received and sent messages with session IDs for traceability.
-- Logs help verify separate endpoint communication and broadcast behavior.
+- Handlers log incoming and outgoing messages with session identifiers to help trace activity and broadcast behavior.
+- Use logging configuration (application.properties / logback) to adjust log levels and formats.
 
 ---
 
-## Project Structure
+## Project structure
+
+A simplified view of the source layout:
 
 ```
-
 src/
 ├── main/
 │   ├── java/
 │   │   └── web_socket/demo/
 │   │       ├── handler/
-│   │       │   ├── EchoHandler.java      \# Echo WebSocket handler
-│   │       │   └── ChatHandler.java      \# Chat WebSocket handler
+│   │       │   ├── EchoHandler.java
+│   │       │   └── ChatHandler.java
 │   │       ├── config/
-│   │       │   └── RawWsConfig.java      \# WebSocket handler registration
-│   │       └── SecurityConfig.java       \# Spring Security configuration
+│   │       │   └── RawWsConfig.java
+│   │       └── SecurityConfig.java
 │   └── resources/
-│       └── application.properties        \# Optional config
+│       └── application.properties
 └── test/
-└── java/
-└── web_socket/demo/
-└── WebSocketHandlersTest.java  \# Unit tests for handlers
-
+    └── java/
+        └── web_socket/demo/
+            └── WebSocketHandlersTest.java
 ```
 
 ---
 
-## Additional Notes
+## Extending the project
 
-- This project can be extended by adding STOMP messaging over WebSocket.
-- Use real WebSocket clients or browser clients for integration testing STOMP.
-- Adjust CORS and security configurations for production readiness.
+Ideas to expand this demo:
+
+- Add STOMP and SockJS support for higher-level messaging.
+- Implement authentication/authorization for chat rooms.
+- Persist chat history or add user nicknames.
+- Add integration tests with an embedded WebSocket client.
+
+If you want, I can add a STOMP example, tighten the security config, or create integration tests.
 
 ---
 
-Feel free to ask if you want detailed guide to add STOMP, improve tests, or deploy the app.
+## Contributing
+
+Contributions, fixes and suggestions are welcome. Open a PR or start an issue describing what you want to change.
 
 ---
-```
 
+## License
+
+Choose a license for your project (e.g., MIT, Apache 2.0) and add a LICENSE file if you plan to share publicly.
+
+---
